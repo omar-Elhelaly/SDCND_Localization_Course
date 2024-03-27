@@ -16,6 +16,41 @@ Eigen::Matrix4d ICP(PointCloudT::Ptr target, PointCloudT::Ptr source, Pose start
 	Eigen::Matrix4d transformation_matrix = Eigen::Matrix4d::Identity ();
 
 	//TODO: complete the ICP function and return the corrected transform
+	
+	// 1. Convert pose to transformation matrix <--- helper.cpp
+	Eigen::Matrix4d initTransform = transform2D(startingPose.theta, startingPose.position.x, startingPose.position.y);
+	
+	// 2. Transform the source to the startingPose
+	PointCloudT::Ptr transformSource(new PointCloudT);
+	pcl::transformPointCloud(*source, *transformSource, initTransform);
+
+	pcl::console::TicToc time;
+	time.tic();
+	
+	// 3. Create the PCL icp object
+	pcl::IterativeClosestPoint<PointT, PointT> icp;
+	
+	// 4. Set the icp object's values
+	icp.setMaximumIterations(iterations);
+	icp.setInputSource(transformSource);
+	icp.setInputTarget(target);
+
+	PointCloudT::Ptr cloud_icp(new PointCloudT);  // ICP output point cloud
+	
+	// 5. Call align on the icp object
+	icp.align(*cloud_icp);
+	
+	// 6. If icp converged get the icp objects output transform and adjust it by the startingPose, return the adjusted transform
+	if (icp.hasConverged())
+	{
+		std::cout << "\nICP has converged, score is " << icp.getFitnessScore() << std::endl;
+		transformation_matrix = icp.getFinalTransformation().cast<double>();
+		transformation_matrix = transformation_matrix * initTransform;
+		return transformation_matrix;
+	}
+	
+	// 7. If icp did not converge log the message and return original identity matrix
+	cout << "WARNING: ICP did not converge" << endl;
 
 	return transformation_matrix;
 
