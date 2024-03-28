@@ -94,7 +94,7 @@ vector<int> NN(PointCloudT::Ptr target, PointCloudT::Ptr source, Eigen::Matrix4d
 
 	// TODO: create a KDtree with target as input
 	pcl::KdTreeFLANN<PointT> kdtree;
-	kdtree.setInputCloud(*target); // use the target point cloud as input
+	kdtree.setInputCloud(target); // use the target point cloud as input
 
 	// TODO: transform source by initTransform
 	PointCloudT::Ptr transformSource(new PointCloudT);
@@ -178,6 +178,8 @@ Eigen::Matrix4d ICP(vector<int> associations, PointCloudT::Ptr target, PointClou
   	// X is pair 1 x point with pair 2 x point for each column and Y is the same except for y points
   	// X = [p1 x0 , p1 x1 , p1 x2 , .... , p1 xn ] - [Px]   Y = [p2 x0 , p2 x1 , p2 x2 , .... , p2 xn ] - [Qx]
   	//     [p1 y0 , p1 y1 , p1 y2 , .... , p1 yn ]   [Py]       [p2 y0 , p2 y1 , p2 y2 , .... , p2 yn ]   [Qy]
+	Eigen::MatrixXd X(2, pairs.size());
+	Eigen::MatrixXd Y(2, pairs.size());
 	int index = 0;
 	for (Pair pair : pairs) {
 		X(0, index) = pair.p1.x - P(0, 0);
@@ -215,7 +217,7 @@ Eigen::Matrix4d ICP(vector<int> associations, PointCloudT::Ptr target, PointClou
 
 	//cout << "score is " << Score(pairs, transformation_matrix) << endl;
 
-	estimations = pairs;
+	//estimations = pairs;
 	transformation_matrix = transformation_matrix * initTransform;
 
   	return transformation_matrix;
