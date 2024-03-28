@@ -69,8 +69,42 @@ Eigen::Matrix4d ICP(PointCloudT::Ptr target, PointCloudT::Ptr source, Pose start
   	Eigen::Matrix4d transformation_matrix = Eigen::Matrix4d::Identity ();
 
   	// TODO: Implement the PCL ICP function and return the correct transformation matrix
-  	// .....
-  	
+	// 1. Convert pose to transformation matrix <--- helper.cpp
+	Eigen::Matrix4d initTransform = transform3D(startingPose.rotation.yaw, startingPose.rotation.pitch, startingPose.rotation.roll,
+		startingPose.position.x, startingPose.position.y, startingPose.position.z);
+
+	// 2. Transform the source to the startingPose
+	PointCloudT::Ptr transformSource(new PointCloudT);
+	pcl::transformPointCloud(*source, *transformSource, initTransform);
+	pcl::console::TicToc time;
+	time.tic();
+
+	// 3. Create the PCL icp object
+	pcl::IterativeClosestPoint<PointT, PointT> icp;
+
+	// 4. Set the icp object's values
+	icp.setMaximumIterations(iterations);
+	icp.setInputSource(transformSource);
+	icp.setInputTarget(target);
+	icp.setMaxCorrespondenceDistance(2);
+
+	PointCloudT::Ptr cloud_icp(new PointCloudT);  // ICP output point cloud
+
+	// 5. Call align on the icp object
+	icp.align(*cloud_icp);
+
+	// 6. If icp converged get the icp objects output transform and adjust it by the startingPose, return the adjusted transform
+	if (icp.hasConverged())
+	{
+		std::cout << "\nICP has converged, score is " << icp.getFitnessScore() << std::endl;
+		transformation_matrix = icp.getFinalTransformation().cast<double>();
+		transformation_matrix = transformation_matrix * initTransform;
+		return transformation_matrix;
+	}
+	// 7. If icp did not converge log the message and return original identity matrix
+	else 
+		cout << "WARNING: ICP did not converge" << endl;
+
   	return transformation_matrix;
 
 }
@@ -161,12 +195,19 @@ int main(){
 	// Load input scan
 	PointCloudT::Ptr scanCloud(new PointCloudT);
   	pcl::io::loadPCDFile("scan1.pcd", *scanCloud);
-
+	
 	typename pcl::PointCloud<PointT>::Ptr cloudFiltered (new pcl::PointCloud<PointT>);
-
-	cloudFiltered = scanCloud; // TODO: remove this line
+	
+	//vector<PointCloudT::Ptr> scans;
+	//loadScans(scans, 1);
+	// 
+	//cloudFiltered = scanCloud; // TODO: remove this line
 	//TODO: Create voxel filter for input scan and save to cloudFiltered
-	// ......
+	pcl::VoxelGrid<PointT> vg;
+	//vg.setInputCloud(scans[0]);
+	vg.setInputCloud(*scanCloud);
+	vg.setLeafSize(0.5, 0.5, 0.5);
+	vg.filter(*cloudFiltered);
 
 	PointCloudT::Ptr transformed_scan (new PointCloudT);
 	Tester tester;
