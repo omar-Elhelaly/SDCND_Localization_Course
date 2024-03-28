@@ -126,15 +126,19 @@ vector<Pair> PairPoints(vector<int> associations, PointCloudT::Ptr target, Point
 	vector<Pair> pairs;
 
 	// TODO: loop through each source point and using the corresponding associations append a Pair of (source point, associated target point)
-	for (int i = 0; i < associations.size(); i++) {
-		if (associations[i] >= 0) {
+	int index = 0;
+	for (PointT point : source->points) {
+		int i = associations[index];
+		if (i >= 0)
+		{
+			PointT association = (*target)[i];
 			if (render) {
-				viewer->removeShape(to_string(i));
-				renderRay(viewer, Point((*source)[i].x, (*source)[i].y, 0), Point(Point((*target)[i].x, Point((*target)[i].y, 0), to_string(i), Color(0, 1, 0));
+				viewer->removeShape(to_string(index));
+				renderRay(viewer, Point(point.x, point.y, 0), Point(association.x, association.y, 0), to_string(index), Color(0, 1, 0));
 			}
-			pairs.push_back(Pair(Point((*source)[i].x, (*source)[i].y, 0), Point((*target)[i].x, (*target)[i].y, 0)));
+			pairs.push_back(Pair(Point(point.x, point.y, 0), Point(association.x, association.y, 0)));
 		}
-		
+		index++;
 	}
 	return pairs;
 }
@@ -152,11 +156,11 @@ Eigen::Matrix4d ICP(vector<int> associations, PointCloudT::Ptr target, PointClou
   	// In other words P is the mean point of source and Q is the mean point target 
   	// P = [ mean p1 x] Q = [ mean p2 x]
   	//	   [ mean p1 y]	    [ mean p2 y]
-	vector<Pair> Pairs = PairPoints(associations, target, transformSource, true, viewer);
+	vector<Pair> pairs = PairPoints(associations, target, transformSource, true, viewer);
 
 	Eigen::MatrixXd P(2, 1);
 	Eigen::MatrixXd Q(2, 1);
-	for (Pair pair : Pairs) {
+	for (Pair pair : pairs) {
 		P(0, 0) += pair.p1.x;
 		P(1, 0) += pair.p1.y;
 
@@ -164,11 +168,11 @@ Eigen::Matrix4d ICP(vector<int> associations, PointCloudT::Ptr target, PointClou
 		Q(1, 0) += pair.p2.y;
 	}
 
-	P(0, 0) = P(0, 0) / Pairs.size();
-	P(1, 0) = P(1, 0) / Pairs.size();
+	P(0, 0) = P(0, 0) / pairs.size();
+	P(1, 0) = P(1, 0) / pairs.size();
 
-	Q(0, 0) = Q(0, 0) / Pairs.size();
-	Q(1, 0) = Q(1, 0) / Pairs.size();
+	Q(0, 0) = Q(0, 0) / pairs.size();
+	Q(1, 0) = Q(1, 0) / pairs.size();
 
   	// TODO: get pairs of points from PairPoints and create matrices X and Y which are both 2 x n where n is number of pairs.
   	// X is pair 1 x point with pair 2 x point for each column and Y is the same except for y points
@@ -209,9 +213,9 @@ Eigen::Matrix4d ICP(vector<int> associations, PointCloudT::Ptr target, PointClou
 	transformation_matrix(0, 3) = t(0, 0);
 	transformation_matrix(1, 3) = t(1, 0);
 
-	cout << "score is " << Score(pairs, transformation_matrix) << endl;
+	//cout << "score is " << Score(pairs, transformation_matrix) << endl;
 
-	estimations = Pairs;
+	estimations = pairs;
 	transformation_matrix = transformation_matrix * initTransform;
 
   	return transformation_matrix;
